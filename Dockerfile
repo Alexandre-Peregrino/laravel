@@ -1,56 +1,30 @@
-# Usa a imagem do PHP com FPM
-FROM php:8.2-fpm
+# Usa a imagem oficial do PHP com Apache
+FROM php:8.3-apache
 
-# Instala dependências do sistema
+# Instala extensões necessárias
 RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip unzip git curl \
-    && docker-php-ext-install pdo pdo_mysql gd
+    libpq-dev \
+    unzip \
+    && docker-php-ext-install pdo pdo_pgsql
 
-# Instala o Composer dentro do container
+# Instala o Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Define o diretório de trabalho dentro do container
-WORKDIR /var/www
-
-# Copia os arquivos do Laravel para dentro do container
+# Copia os arquivos do projeto para dentro do container
+WORKDIR /var/www/html
 COPY . .
 
-# Instala as dependências do Laravel
-RUN composer install --no-dev --optimize-autoloader
-
-# Define permissões para o Laravel funcionar corretamente
-RUN chmod -R 775 storage bootstrap/cache
-
-# Exibe a porta onde o container estará rodando
-EXPOSE 9000
-# Usa a imagem do PHP com FPM
-FROM php:8.2-fpm
-
-# Instala extensões necessárias para o Laravel
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip unzip git curl \
-    && docker-php-ext-install pdo pdo_mysql gd
-
-# Instala o Composer dentro do container
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Define o diretório de trabalho dentro do container
-WORKDIR /var/www
-
-# Copia os arquivos do Laravel para dentro do container
-COPY . .
+# Dá permissão para a pasta storage e bootstrap/cache
+RUN chmod -R 777 storage bootstrap/cache
 
 # Instala as dependências do Laravel
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install
 
-# Define permissões para o Laravel funcionar corretamente
-RUN chmod -R 775 storage bootstrap/cache
+# Gera a chave da aplicação
+RUN php artisan key:generate
 
-# Define a porta onde o container escutará conexões
-EXPOSE 9000
+# Expõe a porta 80 para acessar a aplicação
+EXPOSE 80
+
+# Comando de inicialização
+CMD ["apache2-foreground"]
